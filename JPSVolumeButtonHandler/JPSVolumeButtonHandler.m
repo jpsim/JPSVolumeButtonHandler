@@ -50,17 +50,53 @@ static CGFloat minVolume                    = 0.00001f;
 
 - (void)setupSession {
     NSError *error = nil;
-    self.session = [[AVAudioSession alloc] init];
+    self.session = [AVAudioSession sharedInstance];
     [self.session setCategory:AVAudioSessionCategoryAmbient withOptions:0 error:&error];
-    if (error) return;
+    if (error) {
+        NSLog(@"%@", error);
+        return;
+    }
     [self.session setActive:YES error:&error];
-    if (error) return;
-    
+    if (error) {
+        NSLog(@"%@", error);
+        return;
+    }
+
     // Observe outputVolume
     [self.session addObserver:self
                    forKeyPath:sessionVolumeKeyPath
                       options:(NSKeyValueObservingOptionOld | NSKeyValueObservingOptionNew)
                       context:sessionContext];
+    
+    // Audio session is interrupted when you send the app to the background,
+    // and needs to be set to active again when it goes to app goes back to the foreground
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(audioSessionInterrupted:)
+                                                 name:AVAudioSessionInterruptionNotification
+                                               object:nil];
+}
+
+- (void)audioSessionInterrupted:(NSNotification*)notification {
+    NSDictionary *interuptionDict = notification.userInfo;
+    NSInteger interuptionType = [[interuptionDict valueForKey:AVAudioSessionInterruptionTypeKey] integerValue];
+    switch (interuptionType) {
+        case AVAudioSessionInterruptionTypeBegan:
+            // NSLog(@"Audio Session Interruption case started.");
+            break;
+        case AVAudioSessionInterruptionTypeEnded:
+        {
+            // NSLog(@"Audio Session Interruption case ended.");
+            NSError *error = nil;
+            [self.session setActive:YES error:&error];
+            if (error) {
+                NSLog(@"%@", error);
+            }
+            break;
+        }
+        default:
+            // NSLog(@"Audio Session Interruption Notification case default.");
+            break;
+    }
 }
 
 - (void)disableVolumeHUD {
@@ -68,6 +104,7 @@ static CGFloat minVolume                    = 0.00001f;
     [[[[UIApplication sharedApplication] windows] firstObject] addSubview:self.volumeView];
 }
 
+    
 - (void)setInitialVolume {
     self.initialVolume = self.session.outputVolume;
     if (self.initialVolume > maxVolume) {
