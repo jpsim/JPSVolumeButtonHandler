@@ -20,6 +20,7 @@ static CGFloat minVolume                    = 0.00001f;
 @property (nonatomic, assign) CGFloat          initialVolume;
 @property (nonatomic, strong) AVAudioSession * session;
 @property (nonatomic, strong) MPVolumeView   * volumeView;
+@property (nonatomic, assign) BOOL             appIsActive;
 
 @end
 
@@ -30,8 +31,12 @@ static CGFloat minVolume                    = 0.00001f;
 - (id)init {
     self = [super init];
     if (self) {
+        _appIsActive = YES;
         [self setupSession];
         [self disableVolumeHUD];
+        
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidChangeActive:) name:UIApplicationWillResignActiveNotification object:nil];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidChangeActive:) name:UIApplicationDidBecomeActiveNotification object:nil];
         
         // Wait for the volume view to be ready before setting the volume to avoid showing the HUD
         double delayInSeconds = 0.1f;
@@ -117,6 +122,10 @@ static CGFloat minVolume                    = 0.00001f;
     }
 }
 
+- (void)applicationDidChangeActive:(NSNotification *)notification {
+    self.appIsActive = [notification.name isEqualToString:UIApplicationDidBecomeActiveNotification];
+}
+
 #pragma mark - Convenience
 
 + (instancetype)volumeButtonHandlerWithUpBlock:(JPSVolumeButtonBlock)upBlock downBlock:(JPSVolumeButtonBlock)downBlock {
@@ -132,6 +141,11 @@ static CGFloat minVolume                    = 0.00001f;
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
     if (context == sessionContext) {
+        if (!self.appIsActive) {
+            // Probably control center, skip blocks
+            return;
+        }
+        
         CGFloat newVolume = [change[NSKeyValueChangeNewKey] floatValue];
         CGFloat oldVolume = [change[NSKeyValueChangeOldKey] floatValue];
         
