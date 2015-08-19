@@ -145,6 +145,9 @@ static CGFloat minVolume                    = 0.00001f;
             // Probably control center, skip blocks
             return;
         }
+        if (self.initialVolume ==0) {
+            return;
+        }
         
         CGFloat newVolume = [change[NSKeyValueChangeNewKey] floatValue];
         CGFloat oldVolume = [change[NSKeyValueChangeOldKey] floatValue];
