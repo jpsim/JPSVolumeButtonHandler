@@ -49,7 +49,13 @@ static CGFloat minVolume                    = 0.00001f;
 }
 
 - (void)dealloc {
-    [self.session removeObserver:self forKeyPath:sessionVolumeKeyPath];
+    // https://github.com/jpsim/JPSVolumeButtonHandler/issues/11
+    // http://nshipster.com/key-value-observing/#safe-unsubscribe-with-@try-/-@catch
+    @try {
+        [self.session removeObserver:self forKeyPath:sessionVolumeKeyPath];
+    }
+    @catch (NSException * __unused exception) {
+    }
     [[NSNotificationCenter defaultCenter] removeObserver:self];
     [self.volumeView removeFromSuperview];
 }
