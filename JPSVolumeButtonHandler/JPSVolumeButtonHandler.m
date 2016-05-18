@@ -37,13 +37,8 @@ static CGFloat minVolume                    = 0.00001f;
         
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidChangeActive:) name:UIApplicationWillResignActiveNotification object:nil];
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidChangeActive:) name:UIApplicationDidBecomeActiveNotification object:nil];
-        
-        // Wait for the volume view to be ready before setting the volume to avoid showing the HUD
-        double delayInSeconds = 0.1f;
-        dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
-        dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-            [self setInitialVolume];
-        });
+
+        [self updateInitialVolumeWithDelay];
     }
     return self;
 }
@@ -116,6 +111,14 @@ static CGFloat minVolume                    = 0.00001f;
     [[[[UIApplication sharedApplication] windows] firstObject] addSubview:self.volumeView];
 }
 
+- (void)updateInitialVolumeWithDelay {
+    // Wait for the volume view to be ready before setting the volume to avoid showing the HUD
+    double delayInSeconds = 0.1f;
+    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+    dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+        [self setInitialVolume];
+    });
+}
     
 - (void)setInitialVolume {
     self.initialVolume = self.session.outputVolume;
@@ -130,6 +133,9 @@ static CGFloat minVolume                    = 0.00001f;
 
 - (void)applicationDidChangeActive:(NSNotification *)notification {
     self.appIsActive = [notification.name isEqualToString:UIApplicationDidBecomeActiveNotification];
+    if (self.appIsActive) {
+        [self updateInitialVolumeWithDelay];
+    }
 }
 
 #pragma mark - Convenience
