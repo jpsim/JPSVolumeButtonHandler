@@ -58,7 +58,7 @@ static CGFloat minVolume                    = 0.00001f;
 - (void)setupSession {
     NSError *error = nil;
     self.session = [AVAudioSession sharedInstance];
-    [self.session setCategory:AVAudioSessionCategoryAmbient withOptions:0 error:&error];
+    [self.session setCategory:AVAudioSessionCategoryPlayback withOptions:AVAudioSessionCategoryOptionMixWithOthers error:&error];
     if (error) {
         NSLog(@"%@", error);
         return;
