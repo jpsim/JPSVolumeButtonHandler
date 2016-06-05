@@ -20,6 +20,7 @@ static CGFloat minVolume                    = 0.00001f;
 @property (nonatomic, assign) CGFloat          initialVolume;
 @property (nonatomic, strong) AVAudioSession * session;
 @property (nonatomic, strong) MPVolumeView   * volumeView;
+@property (nonatomic, strong) UISlider       * volumeSlider;
 @property (nonatomic, assign) BOOL             appIsActive;
 
 @end
@@ -37,8 +38,12 @@ static CGFloat minVolume                    = 0.00001f;
         
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidChangeActive:) name:UIApplicationWillResignActiveNotification object:nil];
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidChangeActive:) name:UIApplicationDidBecomeActiveNotification object:nil];
-
-        [self updateInitialVolumeWithDelay];
+        
+        // run these operations later
+        [[NSOperationQueue mainQueue] addOperationWithBlock:^{
+            [self setInitialVolume];
+            [self setupVolumeMuteHandling];
+        }];
     }
     return self;
 }
@@ -53,6 +58,7 @@ static CGFloat minVolume                    = 0.00001f;
     }
     [[NSNotificationCenter defaultCenter] removeObserver:self];
     [self.volumeView removeFromSuperview];
+    self.volumeSlider = nil;
 }
 
 - (void)setupSession {
@@ -68,7 +74,7 @@ static CGFloat minVolume                    = 0.00001f;
         NSLog(@"%@", error);
         return;
     }
-
+    
     // Observe outputVolume
     [self.session addObserver:self
                    forKeyPath:sessionVolumeKeyPath
@@ -109,17 +115,15 @@ static CGFloat minVolume                    = 0.00001f;
 - (void)disableVolumeHUD {
     self.volumeView = [[MPVolumeView alloc] initWithFrame:CGRectMake(MAXFLOAT, MAXFLOAT, 0, 0)];
     [[[[UIApplication sharedApplication] windows] firstObject] addSubview:self.volumeView];
+    
+    [self.volumeView.subviews enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
+        if ([obj isKindOfClass:[UISlider class]]) {
+            self.volumeSlider = obj;
+            *stop = YES;
+        }
+    }];
 }
 
-- (void)updateInitialVolumeWithDelay {
-    // Wait for the volume view to be ready before setting the volume to avoid showing the HUD
-    double delayInSeconds = 0.1f;
-    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
-    dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-        [self setInitialVolume];
-    });
-}
-    
 - (void)setInitialVolume {
     self.initialVolume = self.session.outputVolume;
     if (self.initialVolume > maxVolume) {
@@ -131,10 +135,33 @@ static CGFloat minVolume                    = 0.00001f;
     }
 }
 
+- (void)setupVolumeMuteHandling {
+    // Needs to be done after setting initial volume
+    if (self.volumeSlider && self.muteBlock) {
+        // if muted, set to initial volume so everything starts in the same state
+        if (self.volumeSlider.value == 0) {
+            self.volumeSlider.value = self.initialVolume;
+        }
+        // listen for changes
+        [self.volumeSlider addTarget:self action:@selector(volumeSliderChanged:) forControlEvents:UIControlEventValueChanged];
+    }
+}
+
+- (void)volumeSliderChanged:(id)sender {
+    if (self.volumeSlider.value == 0.0) {
+        // mute button hit
+        // run block and reset volume slider, don't want to stay in mute
+        if (self.muteBlock) self.muteBlock();
+        self.volumeSlider.value = self.initialVolume;
+    }
+}
+
 - (void)applicationDidChangeActive:(NSNotification *)notification {
     self.appIsActive = [notification.name isEqualToString:UIApplicationDidBecomeActiveNotification];
     if (self.appIsActive) {
-        [self updateInitialVolumeWithDelay];
+        [[NSOperationQueue mainQueue] addOperationWithBlock:^{
+            [self setInitialVolume];
+        }];
     }
 }
 
@@ -148,6 +175,21 @@ static CGFloat minVolume                    = 0.00001f;
     }
     return instance;
 }
+
+// Returns a button handler with the specified volume up/down/mute blocks
++ (instancetype)volumeButtonHandlerWithUpBlock:(JPSVolumeButtonBlock)upBlock
+                                     downBlock:(JPSVolumeButtonBlock)downBlock
+                                     muteBlock:(JPSVolumeButtonBlock)muteBlock
+{
+    JPSVolumeButtonHandler *instance = [[JPSVolumeButtonHandler alloc] init];
+    if (instance) {
+        instance.upBlock = upBlock;
+        instance.downBlock = downBlock;
+        instance.muteBlock = muteBlock;
+    }
+    return instance;
+}
+
 
 #pragma mark - KVO
 
