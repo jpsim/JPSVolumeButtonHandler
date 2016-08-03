@@ -33,12 +33,11 @@ static CGFloat minVolume                    = 0.00001f;
     if (self) {
         _appIsActive = YES;
         [self setupSession];
-        [self disableVolumeHUD];
         
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidChangeActive:) name:UIApplicationWillResignActiveNotification object:nil];
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidChangeActive:) name:UIApplicationDidBecomeActiveNotification object:nil];
 
-        [self updateInitialVolumeWithDelay];
+        [self setInitialVolume];
     }
     return self;
 }
@@ -107,19 +106,12 @@ static CGFloat minVolume                    = 0.00001f;
 }
 
 - (void)disableVolumeHUD {
-    self.volumeView = [[MPVolumeView alloc] initWithFrame:CGRectMake(MAXFLOAT, MAXFLOAT, 0, 0)];
-    [[[[UIApplication sharedApplication] windows] firstObject] addSubview:self.volumeView];
+    if(!self.volumeView) {
+        self.volumeView = [[MPVolumeView alloc] initWithFrame:CGRectMake(MAXFLOAT, MAXFLOAT, 0, 0)];
+        [[[[UIApplication sharedApplication] windows] firstObject] addSubview:self.volumeView];
+    }
 }
 
-- (void)updateInitialVolumeWithDelay {
-    // Wait for the volume view to be ready before setting the volume to avoid showing the HUD
-    double delayInSeconds = 0.1f;
-    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
-    dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-        [self setInitialVolume];
-    });
-}
-    
 - (void)setInitialVolume {
     self.initialVolume = self.session.outputVolume;
     if (self.initialVolume > maxVolume) {
@@ -134,7 +126,8 @@ static CGFloat minVolume                    = 0.00001f;
 - (void)applicationDidChangeActive:(NSNotification *)notification {
     self.appIsActive = [notification.name isEqualToString:UIApplicationDidBecomeActiveNotification];
     if (self.appIsActive) {
-        [self updateInitialVolumeWithDelay];
+        [self disableVolumeHUD];
+        [self setInitialVolume];
     }
 }
 
