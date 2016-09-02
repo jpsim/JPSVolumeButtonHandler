@@ -36,7 +36,8 @@ static CGFloat minVolume                    = 0.00001f;
         
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidChangeActive:) name:UIApplicationWillResignActiveNotification object:nil];
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidChangeActive:) name:UIApplicationDidBecomeActiveNotification object:nil];
-
+        
+        [self disableVolumeHUD];
         [self setInitialVolume];
     }
     return self;
