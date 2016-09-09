@@ -18,7 +18,7 @@ typedef void (^JPSVolumeButtonBlock)();
 // A block to run when the volume down button is pressed
 @property (nonatomic, copy) JPSVolumeButtonBlock downBlock;
 
-- (void)startHandler;
+- (void)startHandler:(BOOL)disableSystemVolumeHandler;
 - (void)stopHandler;
 
 // Returns a button handler with the specified up/down volume button blocks

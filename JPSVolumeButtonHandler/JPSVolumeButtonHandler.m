@@ -22,6 +22,7 @@ static CGFloat minVolume                    = 0.00001f;
 @property (nonatomic, strong) MPVolumeView   * volumeView;
 @property (nonatomic, assign) BOOL             appIsActive;
 @property (nonatomic, assign) BOOL             isStarted;
+@property (nonatomic, assign) BOOL             disableSystemVolumeHandler;
 
 @end
 
@@ -47,15 +48,17 @@ static CGFloat minVolume                    = 0.00001f;
     }
 }
 
-- (void)startHandler {
+- (void)startHandler:(BOOL)disableSystemVolumeHandler {
     self.isStarted = YES;
-    self.volumeView.hidden = NO;
+    self.volumeView.hidden = NO; // Start visible to prevent changes made during setup from showing default volume
+    self.disableSystemVolumeHandler = disableSystemVolumeHandler;
     [self setupSession];
 
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidChangeActive:) name:UIApplicationWillResignActiveNotification object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidChangeActive:) name:UIApplicationDidBecomeActiveNotification object:nil];
 
     [self setInitialVolume];
+    self.volumeView.hidden = !disableSystemVolumeHandler;
 }
 
 - (void)stopHandler {
@@ -162,8 +165,8 @@ static CGFloat minVolume                    = 0.00001f;
         
         CGFloat newVolume = [change[NSKeyValueChangeNewKey] floatValue];
         CGFloat oldVolume = [change[NSKeyValueChangeOldKey] floatValue];
-        
-        if (newVolume == self.initialVolume) {
+
+        if (newVolume == self.initialVolume && self.disableSystemVolumeHandler) {
             // Resetting volume, skip blocks
             return;
         }
@@ -173,7 +176,12 @@ static CGFloat minVolume                    = 0.00001f;
         } else {
             if (self.downBlock) self.downBlock();
         }
-        
+
+        if (!self.disableSystemVolumeHandler) {
+            // Don't reset volume if default handling is enabled
+            return;
+        }
+
         // Reset volume
         [self setSystemVolume:self.initialVolume];
     } else {
