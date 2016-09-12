@@ -21,6 +21,7 @@ static CGFloat minVolume                    = 0.00001f;
 @property (nonatomic, strong) AVAudioSession * session;
 @property (nonatomic, strong) MPVolumeView   * volumeView;
 @property (nonatomic, assign) BOOL             appIsActive;
+@property (nonatomic, assign) BOOL             isStarted;
 
 @end
 
@@ -32,18 +33,34 @@ static CGFloat minVolume                    = 0.00001f;
     self = [super init];
     if (self) {
         _appIsActive = YES;
-        [self setupSession];
-        
-        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidChangeActive:) name:UIApplicationWillResignActiveNotification object:nil];
-        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidChangeActive:) name:UIApplicationDidBecomeActiveNotification object:nil];
-        
-        [self disableVolumeHUD];
-        [self setInitialVolume];
+        _volumeView = [[MPVolumeView alloc] initWithFrame:CGRectMake(MAXFLOAT, MAXFLOAT, 0, 0)];
+        [[UIApplication sharedApplication].windows.firstObject addSubview:_volumeView];
+        _volumeView.hidden = YES;
     }
     return self;
 }
 
 - (void)dealloc {
+    if (_isStarted) {
+        [self stopHandler];
+        [self.volumeView removeFromSuperview];
+    }
+}
+
+- (void)startHandler {
+    self.isStarted = YES;
+    self.volumeView.hidden = NO;
+    [self setupSession];
+
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidChangeActive:) name:UIApplicationWillResignActiveNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidChangeActive:) name:UIApplicationDidBecomeActiveNotification object:nil];
+
+    [self setInitialVolume];
+}
+
+- (void)stopHandler {
+    self.isStarted = NO;
+    self.volumeView.hidden = YES;
     // https://github.com/jpsim/JPSVolumeButtonHandler/issues/11
     // http://nshipster.com/key-value-observing/#safe-unsubscribe-with-@try-/-@catch
     @try {
@@ -52,7 +69,6 @@ static CGFloat minVolume                    = 0.00001f;
     @catch (NSException * __unused exception) {
     }
     [[NSNotificationCenter defaultCenter] removeObserver:self];
-    [self.volumeView removeFromSuperview];
 }
 
 - (void)setupSession {
@@ -106,13 +122,6 @@ static CGFloat minVolume                    = 0.00001f;
     }
 }
 
-- (void)disableVolumeHUD {
-    if(!self.volumeView) {
-        self.volumeView = [[MPVolumeView alloc] initWithFrame:CGRectMake(MAXFLOAT, MAXFLOAT, 0, 0)];
-        [[[[UIApplication sharedApplication] windows] firstObject] addSubview:self.volumeView];
-    }
-}
-
 - (void)setInitialVolume {
     self.initialVolume = self.session.outputVolume;
     if (self.initialVolume > maxVolume) {
@@ -126,8 +135,7 @@ static CGFloat minVolume                    = 0.00001f;
 
 - (void)applicationDidChangeActive:(NSNotification *)notification {
     self.appIsActive = [notification.name isEqualToString:UIApplicationDidBecomeActiveNotification];
-    if (self.appIsActive) {
-        [self disableVolumeHUD];
+    if (self.appIsActive && self.isStarted) {
         [self setInitialVolume];
     }
 }
