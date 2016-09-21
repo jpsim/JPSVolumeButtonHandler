@@ -23,6 +23,7 @@ static CGFloat minVolume                    = 0.00001f;
 @property (nonatomic, assign) BOOL             appIsActive;
 @property (nonatomic, assign) BOOL             isStarted;
 @property (nonatomic, assign) BOOL             disableSystemVolumeHandler;
+@property (nonatomic, assign) BOOL             isAdjustingInitialVolume;
 
 @end
 
@@ -52,13 +53,9 @@ static CGFloat minVolume                    = 0.00001f;
     self.isStarted = YES;
     self.volumeView.hidden = NO; // Start visible to prevent changes made during setup from showing default volume
     self.disableSystemVolumeHandler = disableSystemVolumeHandler;
-    [self setupSession];
 
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidChangeActive:) name:UIApplicationWillResignActiveNotification object:nil];
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidChangeActive:) name:UIApplicationDidBecomeActiveNotification object:nil];
-
-    [self setInitialVolume];
-    self.volumeView.hidden = !disableSystemVolumeHandler;
+    // There is a delay between setting the volume view before the system actually disables the HUD
+    [self performSelector:@selector(setupSession) withObject:nil afterDelay:1];
 }
 
 - (void)stopHandler {
@@ -75,8 +72,15 @@ static CGFloat minVolume                    = 0.00001f;
 }
 
 - (void)setupSession {
+    if (!self.isStarted) {
+        // Has since been stopped, do not actually do the setup.
+        return;
+    }
+
     NSError *error = nil;
     self.session = [AVAudioSession sharedInstance];
+    // this must be done before calling setCategory or else the initial volume is reset
+    [self setInitialVolume];
     [self.session setCategory:AVAudioSessionCategoryPlayAndRecord withOptions:AVAudioSessionCategoryOptionMixWithOthers error:&error];
     if (error) {
         NSLog(@"%@", error);
@@ -93,13 +97,24 @@ static CGFloat minVolume                    = 0.00001f;
                    forKeyPath:sessionVolumeKeyPath
                       options:(NSKeyValueObservingOptionOld | NSKeyValueObservingOptionNew)
                       context:sessionContext];
-    
+
     // Audio session is interrupted when you send the app to the background,
     // and needs to be set to active again when it goes to app goes back to the foreground
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(audioSessionInterrupted:)
                                                  name:AVAudioSessionInterruptionNotification
                                                object:nil];
+
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(applicationDidChangeActive:)
+                                                 name:UIApplicationWillResignActiveNotification
+                                               object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(applicationDidChangeActive:)
+                                                 name:UIApplicationDidBecomeActiveNotification
+                                               object:nil];
+
+    self.volumeView.hidden = !self.disableSystemVolumeHandler;
 }
 
 - (void)audioSessionInterrupted:(NSNotification*)notification {
@@ -129,9 +144,11 @@ static CGFloat minVolume                    = 0.00001f;
     self.initialVolume = self.session.outputVolume;
     if (self.initialVolume > maxVolume) {
         self.initialVolume = maxVolume;
+        self.isAdjustingInitialVolume = YES;
         [self setSystemVolume:self.initialVolume];
     } else if (self.initialVolume < minVolume) {
         self.initialVolume = minVolume;
+        self.isAdjustingInitialVolume = YES;
         [self setSystemVolume:self.initialVolume];
     }
 }
@@ -166,9 +183,15 @@ static CGFloat minVolume                    = 0.00001f;
         CGFloat newVolume = [change[NSKeyValueChangeNewKey] floatValue];
         CGFloat oldVolume = [change[NSKeyValueChangeOldKey] floatValue];
 
-        if (newVolume == self.initialVolume && self.disableSystemVolumeHandler) {
+        if (self.disableSystemVolumeHandler && newVolume == self.initialVolume) {
             // Resetting volume, skip blocks
             return;
+        } else if (self.isAdjustingInitialVolume) {
+            if (newVolume == maxVolume || newVolume == minVolume) {
+                // Sometimes when setting initial volume during setup the callback is triggered incorrectly
+                return;
+            }
+            self.isAdjustingInitialVolume = NO;
         }
         
         if (newVolume > oldVolume) {
