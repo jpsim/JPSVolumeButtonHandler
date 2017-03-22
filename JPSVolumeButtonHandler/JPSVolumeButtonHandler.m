@@ -48,14 +48,12 @@ static CGFloat minVolume                    = 0.00001f;
 }
 
 - (void)dealloc {
-    if (_isStarted) {
-        [self stopHandler];
-    }
+    [self stopHandler];
     [self.volumeView removeFromSuperview];
 }
 
 - (void)startHandler:(BOOL)disableSystemVolumeHandler {
-    self.isStarted = YES;
+    [self startHandler];
     self.volumeView.hidden = NO; // Start visible to prevent changes made during setup from showing default volume
     self.disableSystemVolumeHandler = disableSystemVolumeHandler;
 
@@ -64,7 +62,13 @@ static CGFloat minVolume                    = 0.00001f;
 }
 
 - (void)stopHandler {
+    if (!self.isStarted) {
+        // Prevent stop process when already stop
+        return
+    }
+    
     self.isStarted = NO;
+    
     self.volumeView.hidden = YES;
     // https://github.com/jpsim/JPSVolumeButtonHandler/issues/11
     // http://nshipster.com/key-value-observing/#safe-unsubscribe-with-@try-/-@catch
@@ -77,10 +81,12 @@ static CGFloat minVolume                    = 0.00001f;
 }
 
 - (void)setupSession {
-    if (!self.isStarted) {
-        // Has since been stopped, do not actually do the setup.
+    if (self.isStarted){
+        // Prevent setup twice
         return;
     }
+    
+    self.isStarted = YES;
 
     NSError *error = nil;
     self.session = [AVAudioSession sharedInstance];
