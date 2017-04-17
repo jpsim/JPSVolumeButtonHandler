@@ -10,6 +10,9 @@
 #import <AVFoundation/AVFoundation.h>
 #import <MediaPlayer/MediaPlayer.h>
 
+// Comment/uncomment out NSLog to enable/disable logging
+#define JPSLog(fmt, ...) //NSLog(fmt, __VA_ARGS__)
+
 static NSString *const sessionVolumeKeyPath = @"outputVolume";
 static void *sessionContext                 = &sessionContext;
 static CGFloat maxVolume                    = 0.99999f;
@@ -24,6 +27,7 @@ static CGFloat minVolume                    = 0.00001f;
 @property (nonatomic, assign) BOOL             isStarted;
 @property (nonatomic, assign) BOOL             disableSystemVolumeHandler;
 @property (nonatomic, assign) BOOL             isAdjustingInitialVolume;
+@property (nonatomic, assign) BOOL             exactJumpsOnly;
 
 @end
 
@@ -43,6 +47,8 @@ static CGFloat minVolume                    = 0.00001f;
         [[UIApplication sharedApplication].windows.firstObject addSubview:_volumeView];
         
         _volumeView.hidden = YES;
+
+        _exactJumpsOnly = NO;
     }
     return self;
 }
@@ -130,16 +136,20 @@ static CGFloat minVolume                    = 0.00001f;
     self.volumeView.hidden = !self.disableSystemVolumeHandler;
 }
 
+- (void) useExactJumpsOnly:(BOOL)enabled{
+    _exactJumpsOnly = enabled;
+}
+
 - (void)audioSessionInterrupted:(NSNotification*)notification {
     NSDictionary *interuptionDict = notification.userInfo;
     NSInteger interuptionType = [[interuptionDict valueForKey:AVAudioSessionInterruptionTypeKey] integerValue];
     switch (interuptionType) {
         case AVAudioSessionInterruptionTypeBegan:
-            // NSLog(@"Audio Session Interruption case started.");
+            JPSLog(@"Audio Session Interruption case started.", nil);
             break;
         case AVAudioSessionInterruptionTypeEnded:
         {
-            // NSLog(@"Audio Session Interruption case ended.");
+            JPSLog(@"Audio Session Interruption case ended.", nil);
             NSError *error = nil;
             [self.session setActive:YES error:&error];
             if (error) {
@@ -148,7 +158,7 @@ static CGFloat minVolume                    = 0.00001f;
             break;
         }
         default:
-            // NSLog(@"Audio Session Interruption Notification case default.");
+            JPSLog(@"Audio Session Interruption Notification case default.", nil);
             break;
     }
 }
@@ -205,6 +215,15 @@ static CGFloat minVolume                    = 0.00001f;
                 return;
             }
             self.isAdjustingInitialVolume = NO;
+        }
+
+        CGFloat difference = fabs(newVolume-oldVolume);
+
+        JPSLog(@"Old Vol:%f New Vol:%f Difference = %f", (double)oldVolume, (double)newVolume, (double) difference);
+        if (_exactJumpsOnly && (difference > .063 || difference < .062)) {
+            JPSLog(@"Ignoring non-standard Jump of %f, which is not the .0625 a press of the actually volume button would have resulted in.", difference);
+            [self setInitialVolume];
+            return;
         }
         
         if (newVolume > oldVolume) {
