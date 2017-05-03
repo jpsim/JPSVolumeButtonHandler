@@ -40,7 +40,7 @@ static CGFloat minVolume                    = 0.00001f;
     
     if (self) {
         _appIsActive = YES;
-        _sessionCategory = AVAudioSessionCategoryPlayAndRecord;
+        _sessionCategory = AVAudioSessionCategoryPlayback;
 
         _volumeView = [[MPVolumeView alloc] initWithFrame:CGRectMake(MAXFLOAT, MAXFLOAT, 0, 0)];
 
@@ -220,8 +220,11 @@ static CGFloat minVolume                    = 0.00001f;
         CGFloat difference = fabs(newVolume-oldVolume);
 
         JPSLog(@"Old Vol:%f New Vol:%f Difference = %f", (double)oldVolume, (double)newVolume, (double) difference);
-        if (_exactJumpsOnly && (difference > .063 || difference < .062)) {
-            JPSLog(@"Ignoring non-standard Jump of %f, which is not the .0625 a press of the actually volume button would have resulted in.", difference);
+
+        if (_exactJumpsOnly && difference < .062 && (newVolume == 1. || newVolume == 0)) {
+            JPSLog(@"Using a non-standard Jump of %f (%f-%f) which is less than the .0625 because a press of the volume button resulted in hitting min or max volume", difference, oldVolume, newVolume);
+        } else if (_exactJumpsOnly && (difference > .063 || difference < .062)) {
+            JPSLog(@"Ignoring non-standard Jump of %f (%f-%f), which is not the .0625 a press of the actually volume button would have resulted in.", difference, oldVolume, newVolume);
             [self setInitialVolume];
             return;
         }
