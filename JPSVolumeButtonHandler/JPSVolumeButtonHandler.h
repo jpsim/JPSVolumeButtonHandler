@@ -7,6 +7,7 @@
 //
 
 #import <Foundation/Foundation.h>
+#import <AVFoundation/AVFoundation.h>
 
 typedef void (^JPSVolumeButtonBlock)(void);
 
@@ -20,6 +21,8 @@ typedef void (^JPSVolumeButtonBlock)(void);
 
 // A shared audio session category
 @property (nonatomic, strong) NSString * sessionCategory;
+
+@property (nonatomic, assign) AVAudioSessionCategoryOptions sessionOptions;
 
 - (void)startHandler:(BOOL)disableSystemVolumeHandler;
 - (void)stopHandler;
