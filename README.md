@@ -40,12 +40,20 @@ To enbable/disable the handler:
 [self.volumeButtonHandler stopHandler];
 ```
 
-To change audio session category (by default AVAudioSessionCategoryPlayAndRecord):
+To change audio session category (by default `AVAudioSessionCategoryPlayAndRecord`):
 
 ```objective-c
 // Set category
 self.volumeButtonHandler.sessionCategory = AVAudioSessionCategoryAmbient; 
 ```
+
+To change the audio session category options (by default `AVAudioSessionCategoryOptionMixWithOthers`):
+
+```objective-c
+self.volumeButtonHandler.sessionOptions = AVAudioSessionCategoryOptionAllowBluetooth|AVAudioSessionCategoryOptionMixWithOthers;
+```
+
+Note that not all options are compatible with all category options. See `AVAudioSession` documentation for details.
 
 ## License
 

@@ -7,7 +7,6 @@
 //
 
 #import "JPSVolumeButtonHandler.h"
-#import <AVFoundation/AVFoundation.h>
 #import <MediaPlayer/MediaPlayer.h>
 
 // Comment/uncomment out NSLog to enable/disable logging
@@ -41,6 +40,7 @@ static CGFloat minVolume                    = 0.00001f;
     if (self) {
         _appIsActive = YES;
         _sessionCategory = AVAudioSessionCategoryPlayback;
+        _sessionOptions = AVAudioSessionCategoryOptionMixWithOthers;
 
         _volumeView = [[MPVolumeView alloc] initWithFrame:CGRectMake(MAXFLOAT, MAXFLOAT, 0, 0)];
 
@@ -99,7 +99,7 @@ static CGFloat minVolume                    = 0.00001f;
     // this must be done before calling setCategory or else the initial volume is reset
     [self setInitialVolume];
     [self.session setCategory:_sessionCategory
-                  withOptions:AVAudioSessionCategoryOptionMixWithOthers
+                  withOptions:_sessionOptions
                         error:&error];
     if (error) {
         NSLog(@"%@", error);
