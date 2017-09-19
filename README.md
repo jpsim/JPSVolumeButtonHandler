@@ -31,7 +31,7 @@ self.volumeButtonHandler = [JPSVolumeButtonHandler volumeButtonHandlerWithUpBloc
 }];
 ```
 
-To enbable/disable the handler:
+To enable/disable the handler:
 
 ```objective-c
 // Start
