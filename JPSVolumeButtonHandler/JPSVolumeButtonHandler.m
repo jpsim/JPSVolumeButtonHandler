@@ -55,7 +55,10 @@ static CGFloat minVolume                    = 0.00001f;
 
 - (void)dealloc {
     [self stopHandler];
-    [self.volumeView removeFromSuperview];
+    
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self.volumeView removeFromSuperview];
+    });
 }
 
 - (void)startHandler:(BOOL)disableSystemVolumeHandler {
