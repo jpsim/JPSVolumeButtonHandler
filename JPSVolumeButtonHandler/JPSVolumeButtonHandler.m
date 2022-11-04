@@ -193,7 +193,9 @@ static CGFloat minVolume                    = 0.00001f + volumeStep;
     if (self.appIsActive ) {
         [self setInitialVolume];
     } else {
-        [self setSystemVolume:self.realVolume];
+        if (_volumeView) {
+            [self setSystemVolume:self.realVolume];
+        }
     }
 }
 
