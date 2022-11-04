@@ -23,6 +23,7 @@ typedef void (^JPSVolumeButtonBlock)(void);
 @property (nonatomic, strong) NSString * sessionCategory;
 
 @property (nonatomic, assign) AVAudioSessionCategoryOptions sessionOptions;
+@property (nonatomic, strong) AVAudioSession * session;
 
 - (void)startHandler:(BOOL)disableSystemVolumeHandler;
 - (void)stopHandler;
