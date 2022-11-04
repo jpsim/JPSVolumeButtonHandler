@@ -172,11 +172,15 @@ static CGFloat minVolume                    = 0.00001f;
     if (self.initialVolume > maxVolume) {
         self.initialVolume = maxVolume;
         self.isAdjustingInitialVolume = YES;
-        [self setSystemVolume:self.initialVolume];
+        if (_volumeView) {
+            [self setSystemVolume:self.initialVolume];
+        }
     } else if (self.initialVolume < minVolume) {
         self.initialVolume = minVolume;
         self.isAdjustingInitialVolume = YES;
-        [self setSystemVolume:self.initialVolume];
+        if (_volumeView) {
+            [self setSystemVolume:self.initialVolume];
+        }
     }
 }
 
@@ -245,7 +249,9 @@ static CGFloat minVolume                    = 0.00001f;
         }
 
         // Reset volume
-        [self setSystemVolume:self.initialVolume];
+        if (_volumeView) {
+            [self setSystemVolume:self.initialVolume];
+        }
     } else {
         [super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
     }
