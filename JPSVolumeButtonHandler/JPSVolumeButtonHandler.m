@@ -12,15 +12,17 @@
 // Comment/uncomment out NSLog to enable/disable logging
 #define JPSLog(fmt, ...) //NSLog(fmt, __VA_ARGS__)
 
+#define volumeStep 0.06250f
+
 static NSString *const sessionVolumeKeyPath = @"outputVolume";
 static void *sessionContext                 = &sessionContext;
-static CGFloat maxVolume                    = 0.99999f;
-static CGFloat minVolume                    = 0.00001f;
+static CGFloat maxVolume                    = 0.99999f - volumeStep;
+static CGFloat minVolume                    = 0.00001f + volumeStep;
 
 @interface JPSVolumeButtonHandler ()
 
+@property (nonatomic, assign) CGFloat          realVolume;
 @property (nonatomic, assign) CGFloat          initialVolume;
-@property (nonatomic, strong) AVAudioSession * session;
 @property (nonatomic, strong) MPVolumeView   * volumeView;
 @property (nonatomic, assign) BOOL             appIsActive;
 @property (nonatomic, assign) BOOL             isStarted;
@@ -106,12 +108,12 @@ static CGFloat minVolume                    = 0.00001f;
                   withOptions:_sessionOptions
                         error:&error];
     if (error) {
-        NSLog(@"%@", error);
+        JPSLog(@"%@", error);
         return;
     }
     [self.session setActive:YES error:&error];
     if (error) {
-        NSLog(@"%@", error);
+        JPSLog(@"%@", error);
         return;
     }
 
@@ -157,7 +159,7 @@ static CGFloat minVolume                    = 0.00001f;
             NSError *error = nil;
             [self.session setActive:YES error:&error];
             if (error) {
-                NSLog(@"%@", error);
+                JPSLog(@"%@", error);
             }
             break;
         }
@@ -168,7 +170,8 @@ static CGFloat minVolume                    = 0.00001f;
 }
 
 - (void)setInitialVolume {
-    self.initialVolume = self.session.outputVolume;
+    self.realVolume = self.session.outputVolume;
+    self.initialVolume = self.realVolume;
     if (self.initialVolume > maxVolume) {
         self.initialVolume = maxVolume;
         self.isAdjustingInitialVolume = YES;
@@ -186,8 +189,11 @@ static CGFloat minVolume                    = 0.00001f;
 
 - (void)applicationDidChangeActive:(NSNotification *)notification {
     self.appIsActive = [notification.name isEqualToString:UIApplicationDidBecomeActiveNotification];
-    if (self.appIsActive && self.isStarted) {
+    if (!self.isStarted) return;
+    if (self.appIsActive ) {
         [self setInitialVolume];
+    } else {
+        [self setSystemVolume:self.realVolume];
     }
 }
 
@@ -206,13 +212,14 @@ static CGFloat minVolume                    = 0.00001f;
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
     if (context == sessionContext) {
+        CGFloat oldVolume = [change[NSKeyValueChangeOldKey] floatValue];
+        CGFloat newVolume = [change[NSKeyValueChangeNewKey] floatValue];
+        JPSLog(@"Volume change detected: %f -> %f", oldVolume, newVolume);
+        
         if (!self.appIsActive) {
             // Probably control center, skip blocks
             return;
         }
-        
-        CGFloat newVolume = [change[NSKeyValueChangeNewKey] floatValue];
-        CGFloat oldVolume = [change[NSKeyValueChangeOldKey] floatValue];
 
         if (self.disableSystemVolumeHandler && newVolume == self.initialVolume) {
             // Resetting volume, skip blocks
@@ -252,6 +259,7 @@ static CGFloat minVolume                    = 0.00001f;
         if (_volumeView) {
             [self setSystemVolume:self.initialVolume];
         }
+        JPSLog(@"Restoring volume to %f (actual: %f)", self.initialVolume, self.session.outputVolume);
     } else {
         [super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
     }
@@ -262,7 +270,10 @@ static CGFloat minVolume                    = 0.00001f;
 - (void)setSystemVolume:(CGFloat)volume {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    [[MPMusicPlayerController applicationMusicPlayer] setVolume:(float)volume];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [[MPMusicPlayerController applicationMusicPlayer] setVolume:(float)volume];
+        JPSLog(@"Changed volume to %f (actual: %f)", volume, self.session.outputVolume);
+    });
 #pragma clang diagnostic pop
 }
 
