@@ -21,7 +21,6 @@ static CGFloat minVolume                    = 0.00001f + volumeStep;
 
 @interface JPSVolumeButtonHandler ()
 
-@property (nonatomic, assign) CGFloat          realVolume;
 @property (nonatomic, assign) CGFloat          initialVolume;
 @property (nonatomic, strong) MPVolumeView   * volumeView;
 @property (nonatomic, assign) BOOL             appIsActive;
@@ -170,8 +169,7 @@ static CGFloat minVolume                    = 0.00001f + volumeStep;
 }
 
 - (void)setInitialVolume {
-    self.realVolume = self.session.outputVolume;
-    self.initialVolume = self.realVolume;
+    self.initialVolume = self.session.outputVolume;
     if (self.initialVolume > maxVolume) {
         self.initialVolume = maxVolume;
         self.isAdjustingInitialVolume = YES;
@@ -192,10 +190,6 @@ static CGFloat minVolume                    = 0.00001f + volumeStep;
     if (!self.isStarted) return;
     if (self.appIsActive ) {
         [self setInitialVolume];
-    } else {
-        if (_volumeView) {
-            [self setSystemVolume:self.realVolume];
-        }
     }
 }
 
