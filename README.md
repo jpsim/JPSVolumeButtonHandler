@@ -1,7 +1,5 @@
 # JPSVolumeButtonHandler
 
-`JPSVolumeButtonHandler` provides an easy block interface to hardware volume buttons on iOS devices. Perfect for camera apps! Used in [`JPSImagePickerController`](https://github.com/jpsim/JPSImagePickerController).
-
 Features:
 
 * Run blocks whenever a hardware volume button is pressed
@@ -13,9 +11,9 @@ Features:
 
 ### Swift Package Manager (SPM)
 
-Add: `https://github.com/nylki/JPSVolumeButtonHandler.git` (`master` branch) to your "Package Dependencies" in XCode.
+Add: `https://github.com/jpsim/JPSVolumeButtonHandler.git` (`master` branch) to your "Package Dependencies" in XCode.
 
-Or add: `.package(url: "https://github.com/nylki/JPSVolumeButtonHandler.git", branch: "master")` to your swift package file.
+Or add: `.package(url: "https://github.com/jpsim/JPSVolumeButtonHandler.git", branch: "master")` to your swift package file.
 
 ### From CocoaPods
 
