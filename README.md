@@ -11,6 +11,12 @@ Features:
 
 ## Installation
 
+### Swift Package Manager (SPM)
+
+Add: `https://github.com/nylki/JPSVolumeButtonHandler.git` (`master` branch) to your "Package Dependencies" in XCode.
+
+Or add: `.package(url: "https://github.com/nylki/JPSVolumeButtonHandler.git", branch: "master")` to your swift package file.
+
 ### From CocoaPods
 
 Add `pod 'JPSVolumeButtonHandler'` to your Podfile.
