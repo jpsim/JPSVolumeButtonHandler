@@ -1,5 +1,7 @@
 # JPSVolumeButtonHandler
 
+`JPSVolumeButtonHandler` provides an easy block interface to hardware volume buttons on iOS devices. Perfect for camera apps! Used in [`JPSImagePickerController`](https://github.com/jpsim/JPSImagePickerController).
+
 Features:
 
 * Run blocks whenever a hardware volume button is pressed
