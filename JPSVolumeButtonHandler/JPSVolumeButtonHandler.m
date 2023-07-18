@@ -188,6 +188,7 @@ static CGFloat minVolume                    = 0.00001f + volumeStep;
 - (void)applicationDidChangeActive:(NSNotification *)notification {
     self.appIsActive = [notification.name isEqualToString:UIApplicationDidBecomeActiveNotification];
     if (!self.isStarted) return;
+    if (!self.isAdjustingInitialVolume) return;
     if (self.appIsActive ) {
         [self setInitialVolume];
     }
@@ -226,6 +227,7 @@ static CGFloat minVolume                    = 0.00001f + volumeStep;
                 return;
             }
             self.isAdjustingInitialVolume = NO;
+            return;
         }
 
         CGFloat difference = fabs(newVolume-oldVolume);
